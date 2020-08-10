@@ -3,7 +3,6 @@ import glob
 import os
 from pathlib import Path
 
-import mayavi.mlab as mlab
 import numpy as np
 import torch
 import json
@@ -75,7 +74,7 @@ class DemoDataset(DatasetTemplate):
             df = pd.read_csv(self.sample_file_list[index])
             points = np.array(df[['X', 'Y', 'Z', 'intensity']], dtype=np.float32)
             points[:, 3] = points[:, 3] / 255.0
-            
+
             # print("===========points fresh=================")
             #
             # print(points.shape)
@@ -117,6 +116,9 @@ def parse_config():
 def main():
     args, cfg = parse_config()
     logger = common_utils.create_logger()
+    if args.visualize:
+        import mayavi.mlab as mlab
+
     logger.info('-----------------Quick Demo of OpenPCDet-------------------------')
     demo_dataset = DemoDataset(
         dataset_cfg=cfg.DATA_CONFIG, class_names=cfg.CLASS_NAMES, training=False,
