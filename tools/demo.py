@@ -7,6 +7,8 @@ import mayavi.mlab as mlab
 import numpy as np
 import torch
 import json
+from tqdm import tqdm as tqdm
+import pandas as pd
 
 from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.datasets import DatasetTemplate
@@ -28,6 +30,14 @@ def convert_to_numpy(x):
         x = x.cpu().numpy()
     return x
 
+def get_all_files_in_tree(folderPath, extensions = ['jpg','png'], getCompletePaths=True):
+    img_names = []
+    for ext in extensions:
+        img_names += glob.glob("{}/**/*.{}".format(folderPath, ext), recursive=True)
+    if not getCompletePaths:
+        img_names = [os.path.basename(i) for i in img_names]
+    return img_names
+
 class DemoDataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None, ext='.bin'):
         """
@@ -43,10 +53,15 @@ class DemoDataset(DatasetTemplate):
         )
         self.root_path = root_path
         self.ext = ext
-        data_file_list = glob.glob(str(root_path / f'*{self.ext}')) if self.root_path.is_dir() else [self.root_path]
-
+        is_dir = os.path.isdir(self.root_path)
+        data_file_list = get_all_files_in_tree(
+            self.root_path,
+            getCompletePaths=True,
+            extensions=[self.ext.lstrip(".")]
+        ) if is_dir else [self.root_path]
         data_file_list.sort()
         self.sample_file_list = data_file_list
+
 
     def __len__(self):
         return len(self.sample_file_list)
@@ -56,6 +71,11 @@ class DemoDataset(DatasetTemplate):
             points = np.fromfile(self.sample_file_list[index], dtype=np.float32).reshape(-1, 4)
         elif self.ext == '.npy':
             points = np.load(self.sample_file_list[index])
+        elif self.ext == '.csv':
+            df = pd.read_csv(self.sample_file_list[index])
+            points = np.array(df[['X', 'Y', 'Z', 'intensity']], dtype=np.float32)
+            points[:, 3] = points[:, 3] / 255.0
+            
             # print("===========points fresh=================")
             #
             # print(points.shape)
@@ -109,12 +129,12 @@ def main():
     model.cuda()
     model.eval()
     with torch.no_grad():
-        for idx, data_dict in enumerate(demo_dataset):
+        for idx, data_dict in tqdm(enumerate(demo_dataset)):
             logger.info(f'Visualized sample index: \t{idx + 1}')
             data_dict = demo_dataset.collate_batch([data_dict])
             load_data_to_gpu(data_dict)
             pred_dicts, _ = model.forward(data_dict)
-          
+
             if args.visualize:
                 V.draw_scenes(
                     points=data_dict['points'][:, 1:], ref_boxes=pred_dicts[0]['pred_boxes'],
