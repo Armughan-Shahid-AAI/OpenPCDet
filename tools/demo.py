@@ -1,10 +1,12 @@
 import argparse
 import glob
+import os
 from pathlib import Path
 
 import mayavi.mlab as mlab
 import numpy as np
 import torch
+import json
 
 from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.datasets import DatasetTemplate
@@ -12,6 +14,19 @@ from pcdet.models import build_network, load_data_to_gpu
 from pcdet.utils import common_utils
 from visual_utils import visualize_utils as V
 
+def create_dirs_if_not_exists(directories):
+    if type(directories)==str:
+        directories=[directories]
+
+    for d in directories:
+        if not os.path.isdir(d):
+            os.makedirs(d)
+
+
+def convert_to_numpy(x):
+    if not isinstance(x, np.ndarray):
+        x = x.cpu().numpy()
+    return x
 
 class DemoDataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None, ext='.bin'):
@@ -41,6 +56,13 @@ class DemoDataset(DatasetTemplate):
             points = np.fromfile(self.sample_file_list[index], dtype=np.float32).reshape(-1, 4)
         elif self.ext == '.npy':
             points = np.load(self.sample_file_list[index])
+            # print("===========points fresh=================")
+            #
+            # print(points.shape)
+            # print(np.min(points, axis=0))
+            # print(np.max(points, axis=0))
+            # print(points[np.random.randint(low=0, high=len(points), size=10)])
+            # print("===========points fresh=================")
         else:
             raise NotImplementedError
 
@@ -61,6 +83,9 @@ def parse_config():
                         help='specify the point cloud data file or directory')
     parser.add_argument('--ckpt', type=str, default=None, help='specify the pretrained model')
     parser.add_argument('--ext', type=str, default='.bin', help='specify the extension of your point cloud data file')
+    parser.add_argument('--visualize', action='store_true', help='whether to visualize')
+    parser.add_argument('--output_dir', default="predictions_dir", help='whether to visualize')
+
 
     args = parser.parse_args()
 
@@ -89,12 +114,23 @@ def main():
             data_dict = demo_dataset.collate_batch([data_dict])
             load_data_to_gpu(data_dict)
             pred_dicts, _ = model.forward(data_dict)
-
-            V.draw_scenes(
-                points=data_dict['points'][:, 1:], ref_boxes=pred_dicts[0]['pred_boxes'],
-                ref_scores=pred_dicts[0]['pred_scores'], ref_labels=pred_dicts[0]['pred_labels']
-            )
-            mlab.show(stop=True)
+          
+            if args.visualize:
+                V.draw_scenes(
+                    points=data_dict['points'][:, 1:], ref_boxes=pred_dicts[0]['pred_boxes'],
+                    ref_scores=pred_dicts[0]['pred_scores'], ref_labels=pred_dicts[0]['pred_labels']
+                )
+                mlab.show(stop=True)
+            else:
+                create_dirs_if_not_exists([args.output_dir])
+                print ("data path ", args.data_path)
+                output_file = os.path.join(args.output_dir,os.path.splitext(os.path.basename(args.data_path))[0])
+                output_file = output_file+".npy"
+                predictions = pred_dicts[0]
+                predictions['pred_boxes'] = convert_to_numpy(V.boxes_to_corners_3d(predictions['pred_boxes']))
+                predictions['pred_scores'] = convert_to_numpy(predictions['pred_scores'])
+                predictions['pred_labels'] = convert_to_numpy(predictions['pred_labels'])
+                np.save(output_file, predictions)
 
     logger.info('Demo done.')
 
