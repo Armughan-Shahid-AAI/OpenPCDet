@@ -91,7 +91,8 @@ class DemoDataset(DatasetTemplate):
         }
 
         data_dict = self.prepare_data(data_dict=input_dict)
-        return data_dict
+
+        return data_dict, self.sample_file_list[index]
 
 
 def parse_config():
@@ -131,7 +132,7 @@ def main():
     model.cuda()
     model.eval()
     with torch.no_grad():
-        for idx, data_dict in tqdm(enumerate(demo_dataset)):
+        for idx, (data_dict, filepath) in tqdm(enumerate(demo_dataset)):
             #logger.info(f'Visualized sample index: \t{idx + 1}')
             data_dict = demo_dataset.collate_batch([data_dict])
             load_data_to_gpu(data_dict)
@@ -146,7 +147,7 @@ def main():
             else:
                 create_dirs_if_not_exists([args.output_dir])
                 #print ("data path ", args.data_path)
-                output_file = os.path.join(args.output_dir,os.path.splitext(os.path.basename(args.data_path))[0])
+                output_file = os.path.join(args.output_dir,os.path.splitext(os.path.basename(filepath))[0])
                 output_file = output_file+".npy"
                 predictions = pred_dicts[0]
                 predictions['pred_boxes'] = convert_to_numpy(V.boxes_to_corners_3d(predictions['pred_boxes']))
