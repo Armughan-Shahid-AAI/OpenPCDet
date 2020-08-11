@@ -76,14 +76,6 @@ class DemoDataset(DatasetTemplate):
             df = pd.read_csv(self.sample_file_list[index])
             points = np.array(df[['X', 'Y', 'Z', 'intensity']], dtype=np.float32)
             points[:, 3] = points[:, 3] / 255.0
-
-            # print("===========points fresh=================")
-            #
-            # print(points.shape)
-            # print(np.min(points, axis=0))
-            # print(np.max(points, axis=0))
-            # print(points[np.random.randint(low=0, high=len(points), size=10)])
-            # print("===========points fresh=================")
         else:
             raise NotImplementedError
 
@@ -111,9 +103,9 @@ def parse_config():
     parser = argparse.ArgumentParser(description='arg parser')
     parser.add_argument('--cfg_file', type=str, default='cfgs/kitti_models/second.yaml',
                         help='specify the config for demo')
-    parser.add_argument('--predictions_file', type=str, default='demo_data',
+    parser.add_argument('--predictions_file', type=str, default='',
                         help='specify the predictions_file')
-    parser.add_argument('--point_cloud_file', type=str, default='demo_data',
+    parser.add_argument('--point_cloud_file', type=str, default='',
                         help='specify the point_cloud_file')
 
     parser.add_argument('--ext', type=str, default='.bin', help='specify the extension of your point cloud data file')
