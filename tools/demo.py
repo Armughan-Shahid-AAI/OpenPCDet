@@ -132,7 +132,7 @@ def main():
     model.eval()
     with torch.no_grad():
         for idx, data_dict in tqdm(enumerate(demo_dataset)):
-            logger.info(f'Visualized sample index: \t{idx + 1}')
+            #logger.info(f'Visualized sample index: \t{idx + 1}')
             data_dict = demo_dataset.collate_batch([data_dict])
             load_data_to_gpu(data_dict)
             pred_dicts, _ = model.forward(data_dict)
@@ -145,7 +145,7 @@ def main():
                 mlab.show(stop=True)
             else:
                 create_dirs_if_not_exists([args.output_dir])
-                print ("data path ", args.data_path)
+                #print ("data path ", args.data_path)
                 output_file = os.path.join(args.output_dir,os.path.splitext(os.path.basename(args.data_path))[0])
                 output_file = output_file+".npy"
                 predictions = pred_dicts[0]
