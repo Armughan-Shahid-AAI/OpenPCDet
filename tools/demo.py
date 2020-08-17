@@ -13,7 +13,6 @@ from pcdet.config import cfg, cfg_from_yaml_file
 from pcdet.datasets import DatasetTemplate
 from pcdet.models import build_network, load_data_to_gpu
 from pcdet.utils import common_utils
-from visual_utils import visualize_utils as V
 
 def create_dirs_if_not_exists(directories):
     if type(directories)==str:
@@ -119,6 +118,9 @@ def main():
     logger = common_utils.create_logger()
     if args.visualize:
         import mayavi.mlab as mlab
+        from visual_utils import visualize_utils as V
+    else:
+        from visual_utils.conv_utils import boxes_to_corners_3d
 
     logger.info('-----------------Quick Demo of OpenPCDet-------------------------')
     demo_dataset = DemoDataset(
@@ -139,6 +141,7 @@ def main():
             pred_dicts, _ = model.forward(data_dict)
 
             if args.visualize:
+
                 V.draw_scenes(
                     points=data_dict['points'][:, 1:], ref_boxes=pred_dicts[0]['pred_boxes'],
                     ref_scores=pred_dicts[0]['pred_scores'], ref_labels=pred_dicts[0]['pred_labels']
@@ -150,7 +153,7 @@ def main():
                 output_file = os.path.join(args.output_dir,os.path.splitext(os.path.basename(filepath))[0])
                 output_file = output_file+".npy"
                 predictions = pred_dicts[0]
-                predictions['pred_boxes'] = convert_to_numpy(V.boxes_to_corners_3d(predictions['pred_boxes']))
+                predictions['pred_boxes'] = convert_to_numpy(boxes_to_corners_3d(predictions['pred_boxes']))
                 predictions['pred_scores'] = convert_to_numpy(predictions['pred_scores'])
                 predictions['pred_labels'] = convert_to_numpy(predictions['pred_labels'])
                 np.save(output_file, predictions)
